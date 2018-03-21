@@ -1,7 +1,9 @@
 import java.awt.*;
-import java.awt.image.BufferedImage;
+import java.awt.color.ColorSpace;
+import java.awt.image.*;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -9,6 +11,7 @@ import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.swing.*;
 
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
@@ -32,6 +35,9 @@ public class ServerTest extends AbstractHandler
         try {
             String[] nfn = fileName.split("/");
             String scaledImagePath = scale(fileName, width, height, "scaled" + nfn[nfn.length - 1]);
+
+            if(color.equals("grey"))
+                scaledImagePath = greyFilter(ImageIO.read(new File(scaledImagePath)), "grey" + nfn[nfn.length - 1]);
 
             FileInputStream fis = new FileInputStream(scaledImagePath);
 
@@ -83,6 +89,21 @@ public class ServerTest extends AbstractHandler
         while ((bytesRead = fin.read(buffer)) != -1)
             out.write(buffer, 0, bytesRead);
         fin.close();
+    }
+
+    public static String greyFilter(BufferedImage coloredImage, String filename) throws IOException {
+        /*ImageFilter filter = new GrayFilter(true, 50);
+        ImageProducer producer = new FilteredImageSource(coloredImage.getSource(), filter);
+        Image mage = Toolkit.getDefaultToolkit().createImage(producer);*/
+
+        ColorSpace cs = ColorSpace.getInstance(ColorSpace.CS_GRAY);
+        ColorConvertOp op = new ColorConvertOp(cs, null);
+        BufferedImage image = op.filter(coloredImage, null);
+
+
+        File tosave = new File("img/" + filename);
+        ImageIO.write(image, "jpg", tosave);
+        return tosave.getAbsolutePath();
     }
 
 
