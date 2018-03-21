@@ -11,7 +11,6 @@ import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.swing.*;
 
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
@@ -92,14 +91,9 @@ public class ServerTest extends AbstractHandler
     }
 
     public static String greyFilter(BufferedImage coloredImage, String filename) throws IOException {
-        /*ImageFilter filter = new GrayFilter(true, 50);
-        ImageProducer producer = new FilteredImageSource(coloredImage.getSource(), filter);
-        Image mage = Toolkit.getDefaultToolkit().createImage(producer);*/
-
-        ColorSpace cs = ColorSpace.getInstance(ColorSpace.CS_GRAY);
+         ColorSpace cs = ColorSpace.getInstance(ColorSpace.CS_GRAY);
         ColorConvertOp op = new ColorConvertOp(cs, null);
         BufferedImage image = op.filter(coloredImage, null);
-
 
         File tosave = new File("img/" + filename);
         ImageIO.write(image, "jpg", tosave);
