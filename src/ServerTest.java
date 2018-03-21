@@ -37,7 +37,6 @@ public class ServerTest extends AbstractHandler
             if(width != 0 || height != 0)
                 scaledImagePath = scale(fileName, width, height, "scaled" + nfn[nfn.length - 1]);
 
-
             if (color != null){
                 RGBDisplayModel rgb = new RGBDisplayModel();
                 rgb.setOriginalImage(ImageIO.read(new File(scaledImagePath)));
@@ -56,7 +55,7 @@ public class ServerTest extends AbstractHandler
                         break;
                 }
             }
-            
+
             FileInputStream fis = new FileInputStream(scaledImagePath);
 
             sendFile(fis, response.getOutputStream());
@@ -154,24 +153,6 @@ class RGBDisplayModel {
         File tosave = new File("img/" + filename);
         ImageIO.write(blueImage, "jpg", tosave);
         return tosave.getAbsolutePath();
-    }
-
-    public static BufferedImage createTestImage() {
-        BufferedImage bufferedImage = new BufferedImage(200, 200,
-                BufferedImage.TYPE_INT_ARGB);
-        Graphics g = bufferedImage.getGraphics();
-
-        for (int y = 0; y < bufferedImage.getHeight(); y += 20) {
-            if (y % 40 == 0) {
-                g.setColor(Color.WHITE);
-            } else {
-                g.setColor(Color.BLACK);
-            }
-            g.fillRect(0, y, bufferedImage.getWidth(), 20);
-        }
-
-        g.dispose();
-        return bufferedImage;
     }
 
     private BufferedImage createColorImage(BufferedImage originalImage, int mask) {
