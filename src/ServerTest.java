@@ -20,9 +20,8 @@ public class ServerTest extends AbstractHandler
 {
     public void handle(String string, Request rqst, HttpServletRequest request, HttpServletResponse response){
 
-
-        int width = Integer.parseInt(request.getParameter("width"));
-        int height = Integer.parseInt(request.getParameter("height"));
+        String width = request.getParameter("width");
+        String height = request.getParameter("height");
         String color = request.getParameter("color");
 
         BufferedImage bufferedImage = null;
@@ -34,8 +33,8 @@ public class ServerTest extends AbstractHandler
         String[] nfn = fileName.split("/");
 
         try {
-            if(width != 0 || height != 0)
-                scaledImagePath = scale(fileName, width, height, "scaled" + nfn[nfn.length - 1]);
+            if(width != null || height != null)
+                scaledImagePath = scale(fileName, Integer.parseInt(width), Integer.parseInt(height), "scaled" + nfn[nfn.length - 1]);
 
             if (color != null){
                 RGBDisplayModel rgb = new RGBDisplayModel();
