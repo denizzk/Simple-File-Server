@@ -25,16 +25,34 @@ public class ServerTest extends AbstractHandler {
 
 		BufferedImage bufferedImage = null;
 
-		 response.setHeader("Content-Type", "image/jpg");
+		response.setHeader("Content-Type", "image/jpg");
 
 		String fileName = "./img/bears.jpg";
 
 		try {
 			String scaledImagePath = scale(fileName, width, height, "newBears.jpg");
 
-			if (color.equals("grey"))
-				scaledImagePath = greyFilter(ImageIO.read(new File(scaledImagePath)), "greyBears.jpg");
+			if (width != 0 || height != 0)
+				scaledImagePath = scale(fileName, width, height, "scaledBears.jpg");
 
+			if (color != null) {
+				RGBDisplayModel rgb = new RGBDisplayModel();
+				rgb.setOriginalImage(ImageIO.read(new File(scaledImagePath)));
+				switch (color) {
+				case "gray":
+					scaledImagePath = rgb.getGrayImage("grayBears.jpg");
+					break;
+				case "red":
+					scaledImagePath = rgb.getRedImage("redBears.jpg");
+					break;
+				case "blue":
+					scaledImagePath = rgb.getBlueImage("blueBears.jpg");
+					break;
+				case "green":
+					scaledImagePath = rgb.getGreenImage("greenBears.jpg");
+					break;
+				}
+			}
 			FileInputStream fis = new FileInputStream(scaledImagePath);
 
 			sendFile(fis, response.getOutputStream());
@@ -92,5 +110,66 @@ public class ServerTest extends AbstractHandler {
 		File tosave = new File("img\\" + filename);
 		ImageIO.write(image, "jpg", tosave);
 		return tosave.getAbsolutePath();
+	}
+}
+
+class RGBDisplayModel {
+
+	private BufferedImage originalImage;
+	private BufferedImage redImage;
+	private BufferedImage greenImage;
+	private BufferedImage blueImage;
+
+	public BufferedImage getOriginalImage() {
+		return originalImage;
+	}
+
+	public void setOriginalImage(BufferedImage originalImage) {
+		this.originalImage = originalImage;
+		this.redImage = createColorImage(originalImage, 0xFFFF0000);
+		this.greenImage = createColorImage(originalImage, 0xFF00FF00);
+		this.blueImage = createColorImage(originalImage, 0xFF0000FF);
+	}
+
+	public String getGrayImage(String filename) throws Exception {
+		ColorSpace cs = ColorSpace.getInstance(ColorSpace.CS_GRAY);
+		ColorConvertOp op = new ColorConvertOp(cs, null);
+		BufferedImage image = op.filter(originalImage, null);
+
+		File tosave = new File("img/" + filename);
+		ImageIO.write(image, "jpg", tosave);
+		return tosave.getAbsolutePath();
+	}
+
+	public String getRedImage(String filename) throws Exception {
+		File tosave = new File("img/" + filename);
+		ImageIO.write(redImage, "jpg", tosave);
+		return tosave.getAbsolutePath();
+	}
+
+	public String getGreenImage(String filename) throws Exception {
+		File tosave = new File("img/" + filename);
+		ImageIO.write(greenImage, "jpg", tosave);
+		return tosave.getAbsolutePath();
+	}
+
+	public String getBlueImage(String filename) throws Exception {
+		File tosave = new File("img/" + filename);
+		ImageIO.write(blueImage, "jpg", tosave);
+		return tosave.getAbsolutePath();
+	}
+
+	private BufferedImage createColorImage(BufferedImage originalImage, int mask) {
+		BufferedImage colorImage = new BufferedImage(originalImage.getWidth(), originalImage.getHeight(),
+				originalImage.getType());
+
+		for (int x = 0; x < originalImage.getWidth(); x++) {
+			for (int y = 0; y < originalImage.getHeight(); y++) {
+				int pixel = originalImage.getRGB(x, y) & mask;
+				colorImage.setRGB(x, y, pixel);
+			}
+		}
+
+		return colorImage;
 	}
 }
