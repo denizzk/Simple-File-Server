@@ -1,65 +1,89 @@
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
-import java.util.Enumeration;
+import java.io.FileInputStream;
+import java.io.OutputStream;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.imageio.ImageIO;
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.eclipse.jetty.http.HttpStatus;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.AbstractHandler;
-import org.eclipse.jetty.server.handler.ContextHandler;
 
 public class ServerTest extends AbstractHandler
 {
+    public void handle(String string, Request rqst, HttpServletRequest request, HttpServletResponse response){
 
-    @Override
-    public void handle( String target,
-                        Request baseRequest,
-                        HttpServletRequest request,
-                        HttpServletResponse response ) throws IOException, ServletException
-    {
 
-        //response.setCharacterEncoding("iso-2022-jp");
+        int width = Integer.parseInt(request.getParameter("width"));
+        int height = Integer.parseInt(request.getParameter("height"));
+        String color = request.getParameter("color");
 
-        response.getWriter().write("<h1>Hello World</h1>");
-        Enumeration<String> parameterNames = request.getParameterNames();
-        while (parameterNames.hasMoreElements()){
-            String name = (String) parameterNames.nextElement();
-            String value = request.getParameter(name).toString();
-            response.getWriter().write(String.format("%s:%s\n", name, value));
+        BufferedImage bufferedImage = null;
+
+        response.setHeader("Content-Type", "image/jpg");
+
+        String fileName = "./" + request.getPathInfo();
+
+        try {
+            String[] nfn = fileName.split("/");
+            String scaledImagePath = scale(fileName, width, height, "scaled" + nfn[nfn.length - 1]);
+
+            FileInputStream fis = new FileInputStream(scaledImagePath);
+
+            sendFile(fis, response.getOutputStream());
+            bufferedImage = ImageIO.read(new File(scaledImagePath));
+            ImageIO.write(bufferedImage, "jpg", response.getOutputStream());
+
+        } catch (Exception e) {
+            Logger.getLogger(ServerTest.class.getName()).log(Level.SEVERE, null, e);
         }
 
-        response.getWriter().write("<br>");
-        response.getWriter().write(String.format("Method:%s<br>", request.getMethod()));
-        response.getWriter().write(String.format("Request URI:%s<br>", request.getRequestURI()));
-        response.getWriter().write(String.format("Context:%s<br>", request.getContextPath()));
-        response.getWriter().write(String.format("Path:%s<br>", request.getPathInfo()));
-        response.getWriter().write(String.format("Local Host:%s<br>", request.getLocalName()));
-        response.getWriter().write(String.format("Remote Host:%s<br>", request.getRemoteHost()));
-
-        //response.sendRedirect("http://google.com");
-
-        //response.setStatus(HttpStatus.FORBIDDEN_403);
-
-        baseRequest.setHandled(true);
-
     }
+
 
     public static void main( String[] args ) throws Exception
     {
         Server server = new Server(8080);
-
-        ContextHandler context = new ContextHandler();
-        context.setContextPath("/merhabaaa");
-        context.setHandler(new ServerTest());
-        server.setHandler(context);
-
+        server.setHandler(new ServerTest());
         server.start();
         server.join();
     }
+
+
+    public String scale(String path, int width, int height, String filename) throws Exception{
+        BufferedImage org = ImageIO.read(new File(path));
+        BufferedImage resizedCopy = createResizedCopy(org, width, height, true);
+        File tosave = new File("img/" + filename);
+        ImageIO.write(resizedCopy, "jpg", tosave);
+        return tosave.getAbsolutePath();
+
+    }
+
+    private BufferedImage createResizedCopy(Image org, int scaledWidth, int scaledHeight, boolean preserveAlpha){
+        System.out.println("resizing...");
+        int imageType = preserveAlpha ? BufferedImage.TYPE_INT_RGB : BufferedImage.TYPE_INT_ARGB;
+        BufferedImage scaledBI = new BufferedImage(scaledWidth, scaledHeight, imageType);
+        Graphics2D g = scaledBI.createGraphics();
+        if (preserveAlpha)
+            g.setComposite(AlphaComposite.Src);
+        g.drawImage(org, 0, 0, scaledWidth, scaledHeight, null);
+        g.dispose();
+        return scaledBI;
+    }
+
+    public static void sendFile(FileInputStream fin, OutputStream out)throws Exception{
+        byte[] buffer = new byte[1024];
+        int bytesRead;
+
+        while ((bytesRead = fin.read(buffer)) != -1)
+            out.write(buffer, 0, bytesRead);
+        fin.close();
+    }
+
+
 }
