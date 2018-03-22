@@ -50,23 +50,23 @@ public class ServerTest extends AbstractHandler {
 		try {
 			if (width != null || height != null)
 				scaledImagePath = scale(fileName, Integer.parseInt(width), Integer.parseInt(height),
-						"scaled" + nfn[nfn.length - 1]);
+						"scaled_" + nfn[nfn.length - 1]);
 
 			if (color != null) {
 				RGBDisplayModel rgb = new RGBDisplayModel();
 				rgb.setOriginalImage(ImageIO.read(new File(scaledImagePath)));
 				switch (color) {
 				case "gray":
-					scaledImagePath = rgb.getGrayImage("gray" + nfn[nfn.length - 1]);
+					scaledImagePath = rgb.getGrayImage("gray_" + nfn[nfn.length - 1]);
 					break;
 				case "red":
-					scaledImagePath = rgb.getRedImage("red" + nfn[nfn.length - 1]);
+					scaledImagePath = rgb.getRedImage("red_" + nfn[nfn.length - 1]);
 					break;
 				case "blue":
-					scaledImagePath = rgb.getBlueImage("blue" + nfn[nfn.length - 1]);
+					scaledImagePath = rgb.getBlueImage("blue_" + nfn[nfn.length - 1]);
 					break;
 				case "green":
-					scaledImagePath = rgb.getGreenImage("green" + nfn[nfn.length - 1]);
+					scaledImagePath = rgb.getGreenImage("green_" + nfn[nfn.length - 1]);
 					break;
 				}
 			}
