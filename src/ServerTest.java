@@ -4,7 +4,13 @@ import java.awt.image.BufferedImage;
 import java.awt.image.ColorConvertOp;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -17,7 +23,7 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 
 public class ServerTest extends AbstractHandler {
-	public void handle(String string, Request rqst, HttpServletRequest request, HttpServletResponse response) {
+	public void handle(String string, Request rqst, HttpServletRequest request, HttpServletResponse response) throws IOException {
 
 		String width = request.getParameter("width");
 		String height = request.getParameter("height");
@@ -27,28 +33,40 @@ public class ServerTest extends AbstractHandler {
 
 		response.setHeader("Content-Type", "image/jpg");
 
-		String fileName = "./img/bears.jpg";
+		String fileName = "./img/" + request.getPathInfo();
 		String scaledImagePath = fileName;
+		String[] nfn = fileName.split("/");
+//		response.sendRedirect("http://wallpaperswide.com/download/");
+
+		if (!(new File(fileName).exists())) {
+			try (InputStream in = new URL("http://wallpaperswide.com/download" + request.getPathInfo()).openStream()) {
+				Files.copy(in, Paths.get("./img/" + nfn[nfn.length - 1]));
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 
 		try {
 			if (width != null || height != null)
-				scaledImagePath = scale(fileName, Integer.parseInt(width), Integer.parseInt(height), "scaledBears.jpg");
+				scaledImagePath = scale(fileName, Integer.parseInt(width), Integer.parseInt(height),
+						"scaled" + nfn[nfn.length - 1]);
 
 			if (color != null) {
 				RGBDisplayModel rgb = new RGBDisplayModel();
 				rgb.setOriginalImage(ImageIO.read(new File(scaledImagePath)));
 				switch (color) {
 				case "gray":
-					scaledImagePath = rgb.getGrayImage("grayBears.jpg");
+					scaledImagePath = rgb.getGrayImage("gray" + nfn[nfn.length - 1]);
 					break;
 				case "red":
-					scaledImagePath = rgb.getRedImage("redBears.jpg");
+					scaledImagePath = rgb.getRedImage("red" + nfn[nfn.length - 1]);
 					break;
 				case "blue":
-					scaledImagePath = rgb.getBlueImage("blueBears.jpg");
+					scaledImagePath = rgb.getBlueImage("blue" + nfn[nfn.length - 1]);
 					break;
 				case "green":
-					scaledImagePath = rgb.getGreenImage("greenBears.jpg");
+					scaledImagePath = rgb.getGreenImage("green" + nfn[nfn.length - 1]);
 					break;
 				}
 			}
@@ -99,16 +117,6 @@ public class ServerTest extends AbstractHandler {
 		while ((bytesRead = fin.read(buffer)) != -1)
 			out.write(buffer, 0, bytesRead);
 		fin.close();
-	}
-
-	public static String greyFilter(BufferedImage coloredImage, String filename) throws Exception {
-		ColorSpace cs = ColorSpace.getInstance(ColorSpace.CS_GRAY);
-		ColorConvertOp op = new ColorConvertOp(cs, null);
-		BufferedImage image = op.filter(coloredImage, null);
-
-		File tosave = new File("img\\" + filename);
-		ImageIO.write(image, "jpg", tosave);
-		return tosave.getAbsolutePath();
 	}
 }
 
