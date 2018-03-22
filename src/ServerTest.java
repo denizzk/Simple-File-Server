@@ -34,7 +34,7 @@ public class ServerTest extends AbstractHandler
         String[] nfn = fileName.split("/");
 
         if(!(new File(fileName).exists())){
-            try(InputStream in = new URL("https://cdn.wallpaper.com/main" + request.getPathInfo()).openStream()){
+            try(InputStream in = new URL("http://wallpaperswide.com/download" + request.getPathInfo()).openStream()){
                 Files.copy(in, Paths.get("img/" + nfn[nfn.length - 1]));
             } catch (IOException e) {
                 e.printStackTrace();
