@@ -1,10 +1,11 @@
 import java.awt.*;
 import java.awt.color.ColorSpace;
 import java.awt.image.*;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -18,7 +19,7 @@ import org.eclipse.jetty.server.handler.AbstractHandler;
 
 public class ServerTest extends AbstractHandler
 {
-    public void handle(String string, Request rqst, HttpServletRequest request, HttpServletResponse response){
+    public void handle(String string, Request rqst, HttpServletRequest request, HttpServletResponse response) throws MalformedURLException {
 
         String width = request.getParameter("width");
         String height = request.getParameter("height");
@@ -28,10 +29,17 @@ public class ServerTest extends AbstractHandler
 
         response.setHeader("Content-Type", "image/jpg");
 
-        String fileName = "./" + request.getPathInfo();
+        String fileName = "img/" + request.getPathInfo();
         String scaledImagePath = fileName;
         String[] nfn = fileName.split("/");
 
+        if(!(new File(fileName).exists())){
+            try(InputStream in = new URL("https://cdn.wallpaper.com/main" + request.getPathInfo()).openStream()){
+                Files.copy(in, Paths.get("img/" + nfn[nfn.length - 1]));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
         try {
             if(width != null || height != null)
                 scaledImagePath = scale(fileName, Integer.parseInt(width), Integer.parseInt(height), "scaled" + nfn[nfn.length - 1]);
