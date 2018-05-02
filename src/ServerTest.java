@@ -1,179 +1,124 @@
-import java.awt.*;
-import java.awt.color.ColorSpace;
-import java.awt.image.*;
-import java.io.*;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.eclipse.jetty.util.ByteArrayOutputStream2;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 
-import org.eclipse.jetty.server.Request;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.AbstractHandler;
+public class ServerTest extends AbstractHandler {
 
-public class ServerTest extends AbstractHandler
-{
-    public void handle(String string, Request rqst, HttpServletRequest request, HttpServletResponse response) throws MalformedURLException {
+
+    public void handle(String string, Request rqst, HttpServletRequest request, HttpServletResponse response) throws IOException {
 
         String width = request.getParameter("width");
         String height = request.getParameter("height");
         String color = request.getParameter("color");
 
-        BufferedImage bufferedImage = null;
+        Map<String, byte[]> images = new HashMap<String, byte[]>();
 
-        response.setHeader("Content-Type", "image/jpg");
+        String fileName = request.getPathInfo();
 
-        String fileName = "img/" + request.getPathInfo();
-        String scaledImagePath = fileName;
-        String[] nfn = fileName.split("/");
-
-        if(!(new File(fileName).exists())){
-            try(InputStream in = new URL("http://wallpaperswide.com/download" + request.getPathInfo()).openStream()){
-                Files.copy(in, Paths.get("img/" + nfn[nfn.length - 1]));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        if (!images.containsKey(fileName)) {
+            URL url = new URL("http://bihap.com" + request.getPathInfo());
+            InputStream in = url.openStream();
+            ByteArrayOutputStream2 out = new ByteArrayOutputStream2();
+            sendFile(in, out);
+            images.put(fileName, out.toByteArray());
+            in.close();
+            out.close();
         }
-        try {
-            if(width != null || height != null)
-                scaledImagePath = scale(fileName, Integer.parseInt(width), Integer.parseInt(height), "scaled" + nfn[nfn.length - 1]);
 
-            if (color != null){
-                RGBDisplayModel rgb = new RGBDisplayModel();
-                rgb.setOriginalImage(ImageIO.read(new File(scaledImagePath)));
-                switch (color){
-                    case "gray":
-                        scaledImagePath = rgb.getGrayImage("gray" + nfn[nfn.length - 1]);
-                        break;
-                    case "red":
-                        scaledImagePath = rgb.getRedImage("red" + nfn[nfn.length - 1]);
-                        break;
-                    case "blue":
-                        scaledImagePath = rgb.getBlueImage("blue" + nfn[nfn.length - 1]);
-                        break;
-                    case "green":
-                        scaledImagePath = rgb.getGreenImage("green" + nfn[nfn.length - 1]);
-                        break;
-                }
-            }
+        if(width == null && height == null && !color.equals("gray")){
+             sendFile(new ByteArrayInputStream(images.get(fileName)), response.getOutputStream());
+        }
 
-            FileInputStream fis = new FileInputStream(scaledImagePath);
+        else {
+            BufferedImage bufferedImage;
 
-            sendFile(fis, response.getOutputStream());
-            bufferedImage = ImageIO.read(new File(scaledImagePath));
+            ByteArrayInputStream in = new ByteArrayInputStream(images.get(fileName));
+            bufferedImage = ImageIO.read(in);
+
+            if (width != null || height != null)
+                bufferedImage = resize(bufferedImage, Integer.parseInt(width), Integer.parseInt(height), true);
+
+
+            if (color != null && color.equals("gray"))
+                bufferedImage = toGray(bufferedImage);
+
             ImageIO.write(bufferedImage, "jpg", response.getOutputStream());
 
-        } catch (Exception e) {
-            Logger.getLogger(ServerTest.class.getName()).log(Level.SEVERE, null, e);
         }
-
     }
 
+    public static void main(String[] args) throws Exception {
 
-    public static void main( String[] args ) throws Exception
-    {
-        Server server = new Server(8080);
+
+        QueuedThreadPool threadPool = new QueuedThreadPool(4);
+        Server server = new Server(threadPool);
+        ServerConnector serverConnector = new ServerConnector(server);
+        serverConnector.setPort(8080);
+        server.setConnectors(new Connector[]{serverConnector});
+
+        //Server server = new Server(8080);
         server.setHandler(new ServerTest());
         server.start();
         server.join();
     }
 
 
-    public String scale(String path, int width, int height, String filename) throws Exception{
-        BufferedImage org = ImageIO.read(new File(path));
-        BufferedImage resizedCopy = createResizedCopy(org, width, height, true);
-        File tosave = new File("img/" + filename);
-        ImageIO.write(resizedCopy, "jpg", tosave);
-        return tosave.getAbsolutePath();
-
-    }
-
-    private BufferedImage createResizedCopy(Image org, int scaledWidth, int scaledHeight, boolean preserveAlpha){
-        System.out.println("resizing...");
-        int imageType = preserveAlpha ? BufferedImage.TYPE_INT_RGB : BufferedImage.TYPE_INT_ARGB;
-        BufferedImage scaledBI = new BufferedImage(scaledWidth, scaledHeight, imageType);
-        Graphics2D g = scaledBI.createGraphics();
-        if (preserveAlpha)
-            g.setComposite(AlphaComposite.Src);
-        g.drawImage(org, 0, 0, scaledWidth, scaledHeight, null);
-        g.dispose();
-        return scaledBI;
-    }
-
-    public static void sendFile(FileInputStream fin, OutputStream out)throws Exception{
+    private static void sendFile(InputStream in, OutputStream out) throws IOException {
         byte[] buffer = new byte[1024];
         int bytesRead;
-
-        while ((bytesRead = fin.read(buffer)) != -1)
+        while ((bytesRead = in.read(buffer)) != -1)
             out.write(buffer, 0, bytesRead);
-        fin.close();
-    }
-}
-
-class RGBDisplayModel {
-
-    private BufferedImage originalImage;
-    private BufferedImage redImage;
-    private BufferedImage greenImage;
-    private BufferedImage blueImage;
-
-    public BufferedImage getOriginalImage() {
-        return originalImage;
+        in.close();
     }
 
-    public void setOriginalImage(BufferedImage originalImage) {
-        this.originalImage = originalImage;
-        this.redImage = createColorImage(originalImage, 0xFFFF0000);
-        this.greenImage = createColorImage(originalImage, 0xFF00FF00);
-        this.blueImage = createColorImage(originalImage, 0xFF0000FF);
+    private BufferedImage resize(Image originalImage, int scaledWidth, int scaledHeight, boolean preserveAlpha) {
+        System.out.println("resizing...");
+        int imageType = preserveAlpha ? 1 : 2;
+        BufferedImage scaledBI = new BufferedImage(scaledWidth, scaledHeight, imageType);
+        Graphics2D g = scaledBI.createGraphics();
+        if (preserveAlpha) {
+            g.setComposite(AlphaComposite.Src);
+        }
+
+        g.drawImage(originalImage, 0, 0, scaledWidth, scaledHeight, null);
+        g.dispose();
+        return scaledBI;
+
     }
 
-    public String getGrayImage(String filename) throws IOException {
-        ColorSpace cs = ColorSpace.getInstance(ColorSpace.CS_GRAY);
-        ColorConvertOp op = new ColorConvertOp(cs, null);
-        BufferedImage image = op.filter(originalImage, null);
+    private BufferedImage toGray(BufferedImage originalImage) {
+        int width = originalImage.getWidth();
+        int height = originalImage.getHeight();
+        BufferedImage newImg = new BufferedImage(width, height, 2);
 
-        File tosave = new File("img/" + filename);
-        ImageIO.write(image, "jpg", tosave);
-        return tosave.getAbsolutePath();
-    }
-
-    public String getRedImage(String filename) throws IOException {
-        File tosave = new File("img/" + filename);
-        ImageIO.write(redImage, "jpg", tosave);
-        return tosave.getAbsolutePath();
-    }
-
-    public String getGreenImage(String filename) throws IOException {
-        File tosave = new File("img/" + filename);
-        ImageIO.write(greenImage, "jpg", tosave);
-        return tosave.getAbsolutePath();
-    }
-
-    public String getBlueImage(String filename) throws IOException {
-        File tosave = new File("img/" + filename);
-        ImageIO.write(blueImage, "jpg", tosave);
-        return tosave.getAbsolutePath();
-    }
-
-    private BufferedImage createColorImage(BufferedImage originalImage, int mask) {
-        BufferedImage colorImage = new BufferedImage(originalImage.getWidth(),
-                originalImage.getHeight(), originalImage.getType());
-
-        for (int x = 0; x < originalImage.getWidth(); x++) {
-            for (int y = 0; y < originalImage.getHeight(); y++) {
-                int pixel = originalImage.getRGB(x, y) & mask;
-                colorImage.setRGB(x, y, pixel);
+        for(int i = 0; i < height; ++i) {
+            for(int j = 0; j < width; ++j) {
+                Color c = new Color(originalImage.getRGB(j, i));
+                int red = (int)((double)c.getRed() * 0.299D);
+                int green = (int)((double)c.getGreen() * 0.587D);
+                int blue = (int)((double)c.getBlue() * 0.114D);
+                Color newColor = new Color(red + green + blue, red + green + blue, red + green + blue);
+                newImg.setRGB(j, i, newColor.getRGB());
             }
         }
 
-        return colorImage;
+        return newImg;
     }
-
 }
