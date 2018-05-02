@@ -1,11 +1,8 @@
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.Response;
-import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.AbstractHandler;
-import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
@@ -13,8 +10,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.ExecutionException;
@@ -63,15 +58,15 @@ public class ServerTest extends AbstractHandler{
     }
 
     public static void main(String[] args) throws Exception {
-
-        QueuedThreadPool threadPool = new QueuedThreadPool(8);
+/*
+        QueuedThreadPool threadPool = new QueuedThreadPool(4);
         Server server = new Server(threadPool);
         ServerConnector serverConnector = new ServerConnector(server);
         serverConnector.setPort(8080);
         server.setConnectors(new Connector[]{serverConnector});
+*/
 
-
-        //Server server = new Server(8080);
+        Server server = new Server(8080);
         server.setHandler(new ServerTest());
         server.start();
         server.join();
