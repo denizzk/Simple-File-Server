@@ -1,3 +1,4 @@
+import org.asynchttpclient.AsyncHttpClient;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
@@ -16,10 +17,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
-public class ServerTest extends AbstractHandler {
+import static org.asynchttpclient.Dsl.*;
+import org.asynchttpclient.*;
+
+
+public class ServerTest extends AbstractHandler{
 
 
     public void handle(String string, Request rqst, HttpServletRequest request, HttpServletResponse response) throws IOException {
@@ -28,19 +35,25 @@ public class ServerTest extends AbstractHandler {
         String height = request.getParameter("height");
         String color = request.getParameter("color");
 
-        Map<String, byte[]> images = new HashMap<String, byte[]>();
+        ConcurrentMap<String, byte[]> images = new ConcurrentHashMap<String, byte[]>();
+
 
         String fileName = request.getPathInfo();
+        System.out.println("filename:" + fileName);
 
-        if (!images.containsKey(fileName)) {
-            URL url = new URL("http://bihap.com" + request.getPathInfo());
-            InputStream in = url.openStream();
-            ByteArrayOutputStream2 out = new ByteArrayOutputStream2();
-            sendFile(in, out);
-            images.put(fileName, out.toByteArray());
-            in.close();
-            out.close();
+
+        if (images.get(fileName) == null) {
+            AsyncHttpClient asyncHttpClient = asyncHttpClient();
+            Future<Response> whenResponse = asyncHttpClient.prepareGet("http://bihap.com" + fileName).execute();
+            try {
+                images.putIfAbsent(fileName, whenResponse.get().getResponseBodyAsBytes());
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                e.printStackTrace();
+            }
         }
+
 
         if(width == null && height == null && !color.equals("gray")){
              sendFile(new ByteArrayInputStream(images.get(fileName)), response.getOutputStream());
@@ -59,21 +72,27 @@ public class ServerTest extends AbstractHandler {
             if (color != null && color.equals("gray"))
                 bufferedImage = toGray(bufferedImage);
 
+            /*
+            ByteArrayOutputStream os = new ByteArrayOutputStream();
+            ImageIO.write(bufferedImage, "jpg", os);
+            InputStream is = new ByteArrayInputStream(os.toByteArray());
+            sendFile(is, response.getOutputStream());
+            */
             ImageIO.write(bufferedImage, "jpg", response.getOutputStream());
 
         }
     }
 
     public static void main(String[] args) throws Exception {
-
-
+/*
         QueuedThreadPool threadPool = new QueuedThreadPool(4);
         Server server = new Server(threadPool);
         ServerConnector serverConnector = new ServerConnector(server);
         serverConnector.setPort(8080);
         server.setConnectors(new Connector[]{serverConnector});
+*/
 
-        //Server server = new Server(8080);
+        Server server = new Server(8080);
         server.setHandler(new ServerTest());
         server.start();
         server.join();
