@@ -21,6 +21,12 @@ import java.util.concurrent.Future;
 import static org.asynchttpclient.Dsl.asyncHttpClient;
 
 public class ServerTest extends AbstractHandler{
+    private AsyncHttpClient asyncHttpClient;
+
+    public ServerTest(){
+        asyncHttpClient = asyncHttpClient();
+        
+    }
 
     public void handle(String string, Request rqst, HttpServletRequest request, HttpServletResponse response) throws IOException {
 
@@ -33,7 +39,6 @@ public class ServerTest extends AbstractHandler{
         String[] nfn = fileName.split("/");
 
         if (!(new File(fileName).exists())) {
-            AsyncHttpClient asyncHttpClient = asyncHttpClient();
             Future<Response> whenResponse = asyncHttpClient.prepareGet("http://bihap.com" + fileName).execute();
             try {
                 Files.copy(whenResponse.get().getResponseBodyAsStream(), Paths.get(fileName));
