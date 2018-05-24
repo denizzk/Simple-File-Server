@@ -39,9 +39,10 @@ public class ServerTest extends AbstractHandler{
         String fileName = nfn[nfn.length - 1];
 
         BufferedImage bufferedImage;
+        Future<Response> whenResponse;
 
         if (!(cache.containsKey(fileName))) {
-            Future<Response> whenResponse = asyncHttpClient.prepareGet("http://bihap.com/img/" + fileName).execute();
+            whenResponse = asyncHttpClient.prepareGet("http://bihap.com/img/" + fileName).execute();
             try {
                 cache.putIfAbsent(fileName, ImageIO.read(whenResponse.get().getResponseBodyAsStream()));
             } catch (InterruptedException | ExecutionException e) {
@@ -81,7 +82,7 @@ public class ServerTest extends AbstractHandler{
 
     public static void main(String[] args) throws Exception {
 
-        QueuedThreadPool threadPool = new QueuedThreadPool(6,4);
+        QueuedThreadPool threadPool = new QueuedThreadPool(12,4);
         Server server = new Server(threadPool);
         ServerConnector serverConnector = new ServerConnector(server);
         serverConnector.setPort(8080);
